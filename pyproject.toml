@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-minimap"
+description = "This is the initial build of a comfyui minimap.\nVery simple so far. It makes a copy of the workflow graph, simplified and minified, in the bottom left hand corner. It puts a red border where your viewport is. Left click on the minimap and it will move your viewport to that location."
+version = "1.0.0"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/OliverCrosby/Comfyui-Minimap"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "Comfyui-Minimap"
+Icon = ""
