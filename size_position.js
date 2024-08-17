@@ -19,14 +19,14 @@ interactScript.onload = () => {
         }
     });
 
-    // Function to save minimap settings to local storage
-    function saveMinimapSettings(top, left, width, height) {
+    // Function to save minimap settings to local storage, including opacity
+    function saveMinimapSettings(top, left, width, height, opacity) {
         const settings = {
             top: parseInt(top, 10),
             left: parseInt(left, 10),
             width: parseInt(width, 10),
             height: parseInt(height, 10),
-            opacity: 1
+            opacity: opacity
         };
         localStorage.setItem('minimapSettings', JSON.stringify(settings));
     }
@@ -44,6 +44,7 @@ interactScript.onload = () => {
             miniMapElement.style.left = `${settings.left}px`;
             miniMapElement.style.width = `${settings.width}px`;
             miniMapElement.style.height = `${settings.height}px`;
+            miniMapElement.style.opacity = settings.opacity;
         }
     }
 
@@ -57,6 +58,7 @@ interactScript.onload = () => {
                 applyMinimapSettings(miniMapElement, settings);
                 makeDraggable(miniMapElement);
                 makeResizable(miniMapElement);
+                makeScrollable(miniMapElement);  // Add scroll handling for opacity
             }
         }, 500);
     }
@@ -90,7 +92,8 @@ interactScript.onload = () => {
                     miniMapElement.style.top = `${position.y}px`;
 
                     // Save the new position to the settings
-                    saveMinimapSettings(position.y, position.x, miniMapElement.offsetWidth, miniMapElement.offsetHeight);
+                    const opacity = parseFloat(miniMapElement.style.opacity) || 1;
+                    saveMinimapSettings(position.y, position.x, miniMapElement.offsetWidth, miniMapElement.offsetHeight, opacity);
                 }
             },
             cursorChecker(action) {
@@ -137,7 +140,8 @@ interactScript.onload = () => {
                     miniGraphCanvas.height = height;
 
                     // Save the new size and position to the settings
-                    saveMinimapSettings(miniMapElement.style.top, miniMapElement.style.left, width, height);
+                    const opacity = parseFloat(miniMapElement.style.opacity) || 1;
+                    saveMinimapSettings(miniMapElement.style.top, miniMapElement.style.left, width, height, opacity);
                 }
             },
             modifiers: [
@@ -160,6 +164,26 @@ interactScript.onload = () => {
                     }
                 }
                 return null;
+            }
+        });
+    }
+
+    // Function to handle scrolling for opacity change
+    function makeScrollable(miniMapElement) {
+        miniMapElement.addEventListener('wheel', function(event) {
+            if (isCtrlPressed) {
+                event.preventDefault();  // Prevent default scroll action
+                let opacity = parseFloat(miniMapElement.style.opacity) || 1;
+                opacity += event.deltaY * -0.001;  // Adjust the opacity based on scroll direction
+                opacity = Math.min(Math.max(opacity, 0.1), 1);  // Constrain opacity between 0.1 and 1
+                miniMapElement.style.opacity = opacity;
+
+                // Save the new opacity to the settings
+                const top = parseFloat(miniMapElement.style.top);
+                const left = parseFloat(miniMapElement.style.left);
+                const width = parseFloat(miniMapElement.style.width);
+                const height = parseFloat(miniMapElement.style.height);
+                saveMinimapSettings(top, left, width, height, opacity);
             }
         });
     }

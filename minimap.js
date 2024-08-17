@@ -1,16 +1,14 @@
-
 console.log("Graph Mirroring Script Loaded");
 
 // Function to create and inject the mini-graph canvas into the DOM
-function createMiniGraphCanvas() {
+function createMiniGraphCanvas(settings) {
     const miniGraphDiv = document.createElement('div');
     miniGraphDiv.id = 'minimap'; 
     miniGraphDiv.style.position = 'absolute';
-    miniGraphDiv.style.position = 'absolute';
-    miniGraphDiv.style.top = '0px';
-    miniGraphDiv.style.left = '0px';
-    miniGraphDiv.style.width = '240px';
-    miniGraphDiv.style.height = '140px';
+    miniGraphDiv.style.top = `${settings.top}px`;
+    miniGraphDiv.style.left = `${settings.left}px`;
+    miniGraphDiv.style.width = `${settings.width}px`;
+    miniGraphDiv.style.height = `${settings.height}px`;
     miniGraphDiv.style.border = '1px solid #222';
     miniGraphDiv.style.backgroundColor = '#4445';
     miniGraphDiv.style.zIndex = 1000;
@@ -18,8 +16,8 @@ function createMiniGraphCanvas() {
     document.body.appendChild(miniGraphDiv);
 
     const miniGraphCanvas = document.createElement('canvas');
-    miniGraphCanvas.width = 240;
-    miniGraphCanvas.height = 140;
+    miniGraphCanvas.width = settings.width;
+    miniGraphCanvas.height = settings.height;
     miniGraphDiv.appendChild(miniGraphCanvas);
 
     return miniGraphCanvas;
@@ -114,8 +112,8 @@ function drawViewportRectangle(ctx, bounds, scale) {
     const width = viewportWidth * scale;
     const height = viewportHeight * scale;
 
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(168, 219, 235, 0.5)';
+    ctx.lineWidth = 1;
     ctx.strokeRect(x, y, width, height);
 }
 
@@ -150,8 +148,8 @@ function getGraphBounds(graph) {
 }
 
 // Function to initialize the mini-graph and start the rendering loop
-function initializeMiniGraph() {
-    const miniGraphCanvas = createMiniGraphCanvas();
+function initializeMiniGraph(settings) {
+    const miniGraphCanvas = createMiniGraphCanvas(settings);
 
     function updateMiniGraph() {
         renderMiniGraph(window.app.graph, miniGraphCanvas);
@@ -159,6 +157,11 @@ function initializeMiniGraph() {
 
     // Handle click events on the mini-graph canvas to center the main graph
     miniGraphCanvas.addEventListener('click', function(event) {
+        // Only proceed if the Ctrl key is not pressed
+        if (event.ctrlKey) {
+            return; // Exit the function without performing any action
+        }
+
         const rect = miniGraphCanvas.getBoundingClientRect();
         const clickX = event.clientX - rect.left;
         const clickY = event.clientY - rect.top;
@@ -188,7 +191,17 @@ function waitForAppAndGraph() {
         if (window.app && window.app.graph && window.app.graph._nodes && window.app.graph._nodes.length > 0) {
             console.log("App and Graph are ready with nodes:", window.app.graph._nodes.length);
             clearInterval(interval); // Stop checking once the app and graph are ready
-            initializeMiniGraph(); // Start the mini-graph
+
+            // Load settings from localStorage (or use defaults)
+            const settings = JSON.parse(localStorage.getItem('minimapSettings')) || {
+                top: 0,
+                left: 0,
+                width: 240,
+                height: 140,
+                opacity: 1
+            };
+
+            initializeMiniGraph(settings); // Start the mini-graph with loaded settings
         } else {
             console.log("Waiting for app and graph to be ready...");
         }
