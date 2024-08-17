@@ -1,12 +1,8 @@
 # Comfyui Minimap
 
-This is the initial build of a comfyui minimap.
+A minimap of your workflow that you can use to navigate.
 
-Very simple so far. It makes a copy of the workflow graph, simplified and minified, in the bottom left hand corner. It puts a red border where your viewport is. Left click on the minimap and it will move your viewport to that location.
-
-## To-do
-- I want to be able to use the scroll when cursor is over the minimap, so I can aim and zoom.
-- show groups on hover
-- add better placement options
+Resize or move by holding ctrl/command then click and drag.
+change the opacity by holding ctrl/command and scrolling.
 
 ![screenshot of the minimap](screenshot.png)
