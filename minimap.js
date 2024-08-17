@@ -4,8 +4,10 @@ console.log("Graph Mirroring Script Loaded");
 // Function to create and inject the mini-graph canvas into the DOM
 function createMiniGraphCanvas() {
     const miniGraphDiv = document.createElement('div');
+    miniGraphDiv.id = 'minimap'; 
     miniGraphDiv.style.position = 'absolute';
-    miniGraphDiv.style.bottom = '0px';
+    miniGraphDiv.style.position = 'absolute';
+    miniGraphDiv.style.top = '0px';
     miniGraphDiv.style.left = '0px';
     miniGraphDiv.style.width = '240px';
     miniGraphDiv.style.height = '140px';
