@@ -153,18 +153,19 @@ interactScript.onload = () => {
             cursorChecker(action, interactable, element, interacting) {
                 // Show appropriate resize cursor based on the edge being interacted with
                 if (isCtrlPressed) {
-                    if (action.edges.left || action.edges.right) {
-                        if (action.edges.top || action.edges.bottom) {
-                            return 'nwse-resize'; // Diagonal resize
-                        } else {
-                            return 'ew-resize'; // Horizontal resize
-                        }
+                    if ((action.edges.left && action.edges.top) || (action.edges.right && action.edges.bottom)) {
+                        return 'nwse-resize'; // Top-left or bottom-right corners
+                    } else if ((action.edges.right && action.edges.top) || (action.edges.left && action.edges.bottom)) {
+                        return 'nesw-resize'; // Top-right or bottom-left corners
+                    } else if (action.edges.left || action.edges.right) {
+                        return 'ew-resize'; // Horizontal resize
                     } else if (action.edges.top || action.edges.bottom) {
                         return 'ns-resize'; // Vertical resize
                     }
                 }
                 return null;
             }
+            
         });
     }
 
