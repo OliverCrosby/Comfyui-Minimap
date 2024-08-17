@@ -10,7 +10,7 @@ function createMiniGraphCanvas(settings) {
     miniGraphDiv.style.width = `${settings.width}px`;
     miniGraphDiv.style.height = `${settings.height}px`;
     miniGraphDiv.style.border = '1px solid #222';
-    miniGraphDiv.style.backgroundColor = '#4445';
+    miniGraphDiv.style.backgroundColor = '#282828';
     miniGraphDiv.style.zIndex = 1000;
 
     document.body.appendChild(miniGraphDiv);
