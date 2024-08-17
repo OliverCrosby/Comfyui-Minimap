@@ -4,12 +4,57 @@ interactScript.src = 'https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.
 document.head.appendChild(interactScript);
 
 interactScript.onload = () => {
+    let isCtrlPressed = false;
+
+    // Listen for keydown and keyup events to track the state of the Ctrl key
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Control') {
+            isCtrlPressed = true;
+        }
+    });
+
+    window.addEventListener('keyup', (event) => {
+        if (event.key === 'Control') {
+            isCtrlPressed = false;
+        }
+    });
+
+    // Function to save minimap settings to local storage
+    function saveMinimapSettings(top, left, width, height) {
+        const settings = {
+            top: parseInt(top, 10),
+            left: parseInt(left, 10),
+            width: parseInt(width, 10),
+            height: parseInt(height, 10),
+            opacity: 1
+        };
+        localStorage.setItem('minimapSettings', JSON.stringify(settings));
+    }
+
+    // Function to load minimap settings from local storage
+    function loadMinimapSettings() {
+        const settings = localStorage.getItem('minimapSettings');
+        return settings ? JSON.parse(settings) : null;
+    }
+
+    // Apply the loaded settings
+    function applyMinimapSettings(miniMapElement, settings) {
+        if (settings) {
+            miniMapElement.style.top = `${settings.top}px`;
+            miniMapElement.style.left = `${settings.left}px`;
+            miniMapElement.style.width = `${settings.width}px`;
+            miniMapElement.style.height = `${settings.height}px`;
+        }
+    }
+
     // Wait for the #minimap to be injected into the DOM
     function waitForMinimap() {
         const interval = setInterval(() => {
             const miniMapElement = document.getElementById('minimap');
             if (miniMapElement) {
                 clearInterval(interval);
+                const settings = loadMinimapSettings();
+                applyMinimapSettings(miniMapElement, settings);
                 makeDraggable(miniMapElement);
                 makeResizable(miniMapElement);
             }
@@ -25,6 +70,9 @@ interactScript.onload = () => {
         interact('#minimap').draggable({
             listeners: {
                 start(event) {
+                    if (!isCtrlPressed) {
+                        return event.interaction.stop(); // Prevent dragging if Ctrl is not held down
+                    }
                     position.x = parseFloat(miniMapElement.style.left) || 0;
                     position.y = parseFloat(miniMapElement.style.top) || 0;
                 },
@@ -40,7 +88,17 @@ interactScript.onload = () => {
 
                     miniMapElement.style.left = `${position.x}px`;
                     miniMapElement.style.top = `${position.y}px`;
+
+                    // Save the new position to the settings
+                    saveMinimapSettings(position.y, position.x, miniMapElement.offsetWidth, miniMapElement.offsetHeight);
                 }
+            },
+            cursorChecker(action) {
+                // Only show the move cursor if Ctrl is pressed
+                if (isCtrlPressed) {
+                    return 'move';
+                }
+                return null;
             }
         });
     }
@@ -50,6 +108,11 @@ interactScript.onload = () => {
         interact('#minimap').resizable({
             edges: { left: true, right: true, bottom: true, top: true },
             listeners: {
+                start(event) {
+                    if (!isCtrlPressed) {
+                        return event.interaction.stop(); // Prevent resizing if Ctrl is not held down
+                    }
+                },
                 move(event) {
                     let { x, y } = event.target.getBoundingClientRect();
 
@@ -72,6 +135,9 @@ interactScript.onload = () => {
                     const miniGraphCanvas = miniMapElement.querySelector('canvas');
                     miniGraphCanvas.width = width;
                     miniGraphCanvas.height = height;
+
+                    // Save the new size and position to the settings
+                    saveMinimapSettings(miniMapElement.style.top, miniMapElement.style.left, width, height);
                 }
             },
             modifiers: [
@@ -79,7 +145,22 @@ interactScript.onload = () => {
                     min: { width: 100, height: 60 },
                     max: { width: window.innerWidth, height: window.innerHeight }
                 })
-            ]
+            ],
+            cursorChecker(action, interactable, element, interacting) {
+                // Show appropriate resize cursor based on the edge being interacted with
+                if (isCtrlPressed) {
+                    if (action.edges.left || action.edges.right) {
+                        if (action.edges.top || action.edges.bottom) {
+                            return 'nwse-resize'; // Diagonal resize
+                        } else {
+                            return 'ew-resize'; // Horizontal resize
+                        }
+                    } else if (action.edges.top || action.edges.bottom) {
+                        return 'ns-resize'; // Vertical resize
+                    }
+                }
+                return null;
+            }
         });
     }
 
