@@ -194,8 +194,8 @@ function waitForAppAndGraph() {
 
             // Load settings from localStorage (or use defaults)
             const settings = JSON.parse(localStorage.getItem('minimapSettings')) || {
-                top: 0,
-                left: 0,
+                top: window.innerHeight - 140, // Start from bottom
+                left: window.innerWidth - 240, // Start from right
                 width: 240,
                 height: 140,
                 opacity: 1
