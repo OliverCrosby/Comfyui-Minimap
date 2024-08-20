@@ -43,6 +43,34 @@ function getTypeColor(link) {
     return color
 }
 
+function getLinkPosition(originNode, targetNode, bounds, link, scale) {
+    const xOffset = 10;
+
+    // X is either rightmost or leftmost part of node.
+    const originX = (originNode.pos[0] + originNode.size[0] - bounds.left - xOffset) * scale;
+    const targetX = (targetNode.pos[0] - bounds.left + xOffset) * scale;
+
+    const originTop = (originNode.pos[1] - bounds.top) * scale;
+    const targetTop = (targetNode.pos[1] - bounds.top) * scale;
+
+    const topPadding = 40 * scale; // Space for node title
+    const linkPadding = topPadding / 2; // Space between inputs
+
+    const originOffset = topPadding + link.origin_slot * linkPadding;
+    const targetOffset = topPadding + link.target_slot * linkPadding;
+    const originY = originTop + originOffset;
+    const targetY = targetTop + targetOffset;
+
+    return [originX, originY, targetX, targetY]
+}
+
+function drawDot(ctx, x, y, color, scale) {
+    ctx.beginPath();
+    ctx.arc(x, y, 3 * scale, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+}
+
 // Function to render the graph onto the mini-graph canvas
 function renderMiniGraph(graph, miniGraphCanvas) {
     const rootStyles = getComputedStyle(document.documentElement);
@@ -77,15 +105,16 @@ function renderMiniGraph(graph, miniGraphCanvas) {
             ctx.lineWidth = 0.5;
 
             // Correctly calculate positions for the connections
-            const originX = (originNode.pos[0] + originNode.size[0] / 2 - bounds.left) * scale;
-            const originY = (originNode.pos[1] + originNode.size[1] / 2 - bounds.top) * scale;
-            const targetX = (targetNode.pos[0] + targetNode.size[0] / 2 - bounds.left) * scale;
-            const targetY = (targetNode.pos[1] + targetNode.size[1] / 2 - bounds.top) * scale;
+            const [originX, originY, targetX, targetY] = getLinkPosition(originNode, targetNode, bounds, link, scale);
 
             ctx.beginPath();
             ctx.moveTo(originX, originY);
             ctx.lineTo(targetX, targetY);
             ctx.stroke();
+
+            // Store the coordinates for the dots
+            link._originPos = { x: originX, y: originY };
+            link._targetPos = { x: targetX, y: targetY };
         }
     });
 
@@ -113,6 +142,18 @@ function renderMiniGraph(graph, miniGraphCanvas) {
 
         ctx.fillRect(x, y, width, height);
     });
+
+    // Draw all the dots on top
+    if (scale > 0.15) {
+        graph.links.forEach(link => {
+            if (link._originPos && link._targetPos) {
+                const dotColor = getTypeColor(link);
+
+                drawDot(ctx, link._originPos.x, link._originPos.y, dotColor, scale);
+                drawDot(ctx, link._targetPos.x, link._targetPos.y, dotColor, scale);
+            }
+        });
+    }
 
     // Draw the viewport rectangle
     drawViewportRectangle(ctx, bounds, scale);
