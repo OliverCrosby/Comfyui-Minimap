@@ -1,4 +1,7 @@
+import { api } from '../../scripts/api.js';
+
 console.log("Graph Mirroring Script Loaded");
+let currentExecutingNode = "0";
 
 // Function to create and inject the mini-graph canvas into the DOM
 function createMiniGraphCanvas(settings) {
@@ -153,6 +156,14 @@ function renderMiniGraph(graph, miniGraphCanvas) {
         const height = (node.size[1] + heightPadding) * scale;
 
         ctx.fillRect(x, y, width, height);
+
+        if (node.id == currentExecutingNode) {
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 1;
+
+            // Draw the outline
+            ctx.strokeRect(x, y, width, height);
+        }
     });
 
     // Draw all the dots on top
@@ -276,6 +287,15 @@ function waitForAppAndGraph() {
                 height: 140,
                 opacity: 1
             };
+
+            api.addEventListener("executing", (e) => {
+                const nodeId = e.detail
+                if (nodeId != null) {
+                    currentExecutingNode = nodeId;
+                    return;
+                }
+                currentExecutingNode = 0;
+            });
 
             initializeMiniGraph(settings); // Start the mini-graph with loaded settings
         } else {
