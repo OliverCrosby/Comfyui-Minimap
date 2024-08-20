@@ -150,39 +150,63 @@ function getGraphBounds(graph) {
 // Function to initialize the mini-graph and start the rendering loop
 function initializeMiniGraph(settings) {
     const miniGraphCanvas = createMiniGraphCanvas(settings);
+    let isDragging = false;
 
     function updateMiniGraph() {
         renderMiniGraph(window.app.graph, miniGraphCanvas);
     }
 
-    // Handle click events on the mini-graph canvas to center the main graph
-    miniGraphCanvas.addEventListener('click', function(event) {
+    // Handle mouse down event
+    miniGraphCanvas.addEventListener('mousedown', function(event) {
         // Only proceed if the Ctrl key is not pressed
         if (event.ctrlKey) {
             return; // Exit the function without performing any action
         }
 
-        const rect = miniGraphCanvas.getBoundingClientRect();
-        const clickX = event.clientX - rect.left;
-        const clickY = event.clientY - rect.top;
+        isDragging = true;
+        moveMainCanvas(event, miniGraphCanvas);
+    });
 
-        const graphX = clickX / miniGraphCanvas.scale + miniGraphCanvas.bounds.left;
-        const graphY = clickY / miniGraphCanvas.scale + miniGraphCanvas.bounds.top;
+    // Handle mouse move event (for dragging)
+    miniGraphCanvas.addEventListener('mousemove', function(event) {
+        if (isDragging) {
+            moveMainCanvas(event, miniGraphCanvas);
+        }
+    });
 
-        // Center the main canvas around the clicked point
-        const canvasElement = document.querySelector('canvas');
-        const viewportWidth = canvasElement.clientWidth / window.app.canvas.ds.scale;
-        const viewportHeight = canvasElement.clientHeight / window.app.canvas.ds.scale;
+    // Handle mouse up event
+    miniGraphCanvas.addEventListener('mouseup', function() {
+        isDragging = false;
+    });
 
-        window.app.canvas.ds.offset[0] = -(graphX - viewportWidth / 2);
-        window.app.canvas.ds.offset[1] = -(graphY - viewportHeight / 2);
-
-        window.app.canvas.setDirty(true, true); // Force redraw
+    // Handle mouse out event (stop dragging if mouse leaves the minimap)
+    miniGraphCanvas.addEventListener('mouseout', function() {
+        isDragging = false;
     });
 
     // Update the mini-graph immediately and then on every frame
     updateMiniGraph();
     setInterval(updateMiniGraph, 100); // Adjust the interval as needed
+}
+
+// Function to move the main canvas based on the mouse event
+function moveMainCanvas(event, miniGraphCanvas) {
+    const rect = miniGraphCanvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+
+    const graphX = clickX / miniGraphCanvas.scale + miniGraphCanvas.bounds.left;
+    const graphY = clickY / miniGraphCanvas.scale + miniGraphCanvas.bounds.top;
+
+    // Center the main canvas around the clicked point
+    const canvasElement = document.querySelector('canvas');
+    const viewportWidth = canvasElement.clientWidth / window.app.canvas.ds.scale;
+    const viewportHeight = canvasElement.clientHeight / window.app.canvas.ds.scale;
+
+    window.app.canvas.ds.offset[0] = -(graphX - viewportWidth / 2);
+    window.app.canvas.ds.offset[1] = -(graphY - viewportHeight / 2);
+
+    window.app.canvas.setDirty(true, true); // Force redraw
 }
 
 // Ensure the app and graph are ready before initializing the mini-graph
