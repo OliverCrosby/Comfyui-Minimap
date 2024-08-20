@@ -23,6 +23,26 @@ function createMiniGraphCanvas(settings) {
     return miniGraphCanvas;
 }
 
+function getTypeColor(link) {
+    const type = link.type;
+    let color = app.canvas.default_connection_color_byType[type]
+    if (color == "") {
+        switch (type) {
+            case "STRING":
+            case "INT":
+                color = "#77ff77"
+                break
+            default:
+                color = "#666"
+                if (link.color != undefined) {
+                    color = link.color;
+                }
+                break
+        }
+    }
+    return color
+}
+
 // Function to render the graph onto the mini-graph canvas
 function renderMiniGraph(graph, miniGraphCanvas) {
     const rootStyles = getComputedStyle(document.documentElement);
@@ -53,7 +73,7 @@ function renderMiniGraph(graph, miniGraphCanvas) {
         const targetNode = graph._nodes_by_id[link.target_id];
 
         if (originNode && targetNode) {
-            ctx.strokeStyle = '#666'; // Slightly darker gray for connections
+            ctx.strokeStyle = getTypeColor(link);
             ctx.lineWidth = 0.5;
 
             // Correctly calculate positions for the connections
