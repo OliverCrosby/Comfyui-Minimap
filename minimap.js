@@ -3,14 +3,14 @@ console.log("Graph Mirroring Script Loaded");
 // Function to create and inject the mini-graph canvas into the DOM
 function createMiniGraphCanvas(settings) {
     const miniGraphDiv = document.createElement('div');
-    miniGraphDiv.id = 'minimap'; 
+    miniGraphDiv.id = 'minimap';
     miniGraphDiv.style.position = 'absolute';
     miniGraphDiv.style.top = `${settings.top}px`;
     miniGraphDiv.style.left = `${settings.left}px`;
     miniGraphDiv.style.width = `${settings.width}px`;
     miniGraphDiv.style.height = `${settings.height}px`;
-    miniGraphDiv.style.border = '1px solid #222';
-    miniGraphDiv.style.backgroundColor = '#282828';
+    miniGraphDiv.style.border = '1px solid var(--border-color)';
+    miniGraphDiv.style.backgroundColor = 'var(--bg-color)';
     miniGraphDiv.style.zIndex = 1000;
 
     document.body.appendChild(miniGraphDiv);
@@ -25,15 +25,18 @@ function createMiniGraphCanvas(settings) {
 
 // Function to render the graph onto the mini-graph canvas
 function renderMiniGraph(graph, miniGraphCanvas) {
+    const rootStyles = getComputedStyle(document.documentElement);
+    const defaultNodeColor = rootStyles.getPropertyValue('--comfy-menu-bg').trim();
+
     const ctx = miniGraphCanvas.getContext('2d');
-    
+
     // Get the background color of the workflow
     const canvasElement = document.querySelector('canvas');
     const backgroundColor = getComputedStyle(canvasElement).backgroundColor;
 
     // Clear the entire mini-graph canvas
     ctx.clearRect(0, 0, miniGraphCanvas.width, miniGraphCanvas.height);
-    
+
     // Fill the canvas with the background color
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, miniGraphCanvas.width, miniGraphCanvas.height);
@@ -78,16 +81,16 @@ function renderMiniGraph(graph, miniGraphCanvas) {
 
     // Render nodes on top of the connections
     graph._nodes.forEach(node => {
-        const nodeColor = node.color || '#353535'; // Default to gray if no color is set
-        
+        const nodeColor = node.color || defaultNodeColor;
+
         ctx.fillStyle = nodeColor;
-        
+
         // Scale the node position and size to fit the mini-graph canvas
         const x = (node.pos[0] - bounds.left) * scale;
         const y = (node.pos[1] - bounds.top) * scale;
         const width = node.size[0] * scale;
         const height = node.size[1] * scale;
-        
+
         ctx.fillRect(x, y, width, height);
     });
 
