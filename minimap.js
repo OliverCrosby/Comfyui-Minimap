@@ -1,16 +1,19 @@
+import { api } from '../../scripts/api.js';
+
 console.log("Graph Mirroring Script Loaded");
+let currentExecutingNode = "0";
 
 // Function to create and inject the mini-graph canvas into the DOM
 function createMiniGraphCanvas(settings) {
     const miniGraphDiv = document.createElement('div');
-    miniGraphDiv.id = 'minimap'; 
+    miniGraphDiv.id = 'minimap';
     miniGraphDiv.style.position = 'absolute';
     miniGraphDiv.style.top = `${settings.top}px`;
     miniGraphDiv.style.left = `${settings.left}px`;
     miniGraphDiv.style.width = `${settings.width}px`;
     miniGraphDiv.style.height = `${settings.height}px`;
-    miniGraphDiv.style.border = '1px solid #222';
-    miniGraphDiv.style.backgroundColor = '#282828';
+    miniGraphDiv.style.border = '1px solid var(--border-color)';
+    miniGraphDiv.style.backgroundColor = 'var(--bg-color)';
     miniGraphDiv.style.zIndex = 1000;
 
     document.body.appendChild(miniGraphDiv);
@@ -23,17 +26,75 @@ function createMiniGraphCanvas(settings) {
     return miniGraphCanvas;
 }
 
+function getTypeColor(link) {
+    const type = link.type;
+    let color = app.canvas.default_connection_color_byType[type]
+    if (color == "") {
+        switch (type) {
+            case "STRING":
+            case "INT":
+                color = "#77ff77";
+                break;
+            default:
+                color = "#666";
+                if (link.color != undefined) {
+                    color = link.color;
+                }
+                break;
+        }
+    }
+    return color;
+}
+
+function getLinkPosition(originNode, targetNode, bounds, link, scale) {
+    const xOffset = 10;
+    const topPadding = 10 * scale; // Space for node title
+    const linkPadding = 20 * scale; // Space between inputs
+
+    function calculateX(node, isOrigin) {
+        const nodeX = node.pos[0] + (isOrigin ? node.size[0] - xOffset : xOffset);
+        return (nodeX - bounds.left) * scale;
+    }
+
+    function calculateY(node, slot) {
+        if (node.isVirtualNode) {
+            return (node.pos[1] - bounds.top + node.size[1] * 0.5) * scale;
+        }
+
+        const nodeTop = (node.pos[1] - bounds.top) * scale;
+        return nodeTop + topPadding + slot * linkPadding;
+    }
+
+    const originX = calculateX(originNode, true);
+    const targetX = calculateX(targetNode, false);
+
+    const originY = calculateY(originNode, link.origin_slot);
+    const targetY = calculateY(targetNode, link.target_slot);
+
+    return [originX, originY, targetX, targetY];
+}
+
+function drawDot(ctx, x, y, color, scale) {
+    ctx.beginPath();
+    ctx.arc(x, y, 3 * scale, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+}
+
 // Function to render the graph onto the mini-graph canvas
 function renderMiniGraph(graph, miniGraphCanvas) {
+    const rootStyles = getComputedStyle(document.documentElement);
+    const defaultNodeColor = rootStyles.getPropertyValue('--comfy-menu-bg').trim();
+
     const ctx = miniGraphCanvas.getContext('2d');
-    
+
     // Get the background color of the workflow
     const canvasElement = document.querySelector('canvas');
     const backgroundColor = getComputedStyle(canvasElement).backgroundColor;
 
     // Clear the entire mini-graph canvas
     ctx.clearRect(0, 0, miniGraphCanvas.width, miniGraphCanvas.height);
-    
+
     // Fill the canvas with the background color
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, miniGraphCanvas.width, miniGraphCanvas.height);
@@ -50,46 +111,71 @@ function renderMiniGraph(graph, miniGraphCanvas) {
         const targetNode = graph._nodes_by_id[link.target_id];
 
         if (originNode && targetNode) {
-            ctx.strokeStyle = '#666'; // Slightly darker gray for connections
+            ctx.strokeStyle = getTypeColor(link);
             ctx.lineWidth = 0.5;
 
             // Correctly calculate positions for the connections
-            const originX = (originNode.pos[0] + originNode.size[0] / 2 - bounds.left) * scale;
-            const originY = (originNode.pos[1] + originNode.size[1] / 2 - bounds.top) * scale;
-            const targetX = (targetNode.pos[0] + targetNode.size[0] / 2 - bounds.left) * scale;
-            const targetY = (targetNode.pos[1] + targetNode.size[1] / 2 - bounds.top) * scale;
+            const [originX, originY, targetX, targetY] = getLinkPosition(originNode, targetNode, bounds, link, scale);
 
             ctx.beginPath();
             ctx.moveTo(originX, originY);
             ctx.lineTo(targetX, targetY);
             ctx.stroke();
+
+            // Store the coordinates for the dots
+            link._originPos = { x: originX, y: originY };
+            link._targetPos = { x: targetX, y: targetY };
         }
     });
 
     // Render groups (if any)
     graph._groups.forEach(group => {
         ctx.fillStyle = group.color || '#ccc'; // Use group color or default
+        ctx.globalAlpha = 0.35;
         const x = (group.pos[0] - bounds.left) * scale;
         const y = (group.pos[1] - bounds.top) * scale;
         const width = group.size[0] * scale;
         const height = group.size[1] * scale;
         ctx.fillRect(x, y, width, height);
+        ctx.globalAlpha = 1.0;
     });
 
     // Render nodes on top of the connections
     graph._nodes.forEach(node => {
-        const nodeColor = node.color || '#353535'; // Default to gray if no color is set
-        
+        const nodeColor = node.color || defaultNodeColor;
+        // For some reason, the top title of the nodes are not included in the size.
+        let heightPadding = node.isVirtualNode ? 0 : 30;
+
         ctx.fillStyle = nodeColor;
-        
+
         // Scale the node position and size to fit the mini-graph canvas
         const x = (node.pos[0] - bounds.left) * scale;
-        const y = (node.pos[1] - bounds.top) * scale;
+        const y = (node.pos[1] - bounds.top - heightPadding) * scale;
         const width = node.size[0] * scale;
-        const height = node.size[1] * scale;
-        
+        const height = (node.size[1] + heightPadding) * scale;
+
         ctx.fillRect(x, y, width, height);
+
+        if (node.id == currentExecutingNode) {
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 1;
+
+            // Draw the outline
+            ctx.strokeRect(x, y, width, height);
+        }
     });
+
+    // Draw all the dots on top
+    if (scale > 0.15) {
+        graph.links.forEach(link => {
+            if (link._originPos && link._targetPos) {
+                const dotColor = getTypeColor(link);
+
+                drawDot(ctx, link._originPos.x, link._originPos.y, dotColor, scale);
+                drawDot(ctx, link._targetPos.x, link._targetPos.y, dotColor, scale);
+            }
+        });
+    }
 
     // Draw the viewport rectangle
     drawViewportRectangle(ctx, bounds, scale);
@@ -147,37 +233,60 @@ function getGraphBounds(graph) {
     };
 }
 
+// Function to move the main canvas based on the mouse event
+function moveMainCanvas(event, miniGraphCanvas) {
+    const rect = miniGraphCanvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+
+    const graphX = clickX / miniGraphCanvas.scale + miniGraphCanvas.bounds.left;
+    const graphY = clickY / miniGraphCanvas.scale + miniGraphCanvas.bounds.top;
+
+    // Center the main canvas around the clicked point
+    const canvasElement = document.querySelector('canvas');
+    const viewportWidth = canvasElement.clientWidth / window.app.canvas.ds.scale;
+    const viewportHeight = canvasElement.clientHeight / window.app.canvas.ds.scale;
+
+    window.app.canvas.ds.offset[0] = -(graphX - viewportWidth / 2);
+    window.app.canvas.ds.offset[1] = -(graphY - viewportHeight / 2);
+
+    window.app.canvas.setDirty(true, true); // Force redraw
+}
+
 // Function to initialize the mini-graph and start the rendering loop
 function initializeMiniGraph(settings) {
     const miniGraphCanvas = createMiniGraphCanvas(settings);
+    let isDragging = false;
 
     function updateMiniGraph() {
         renderMiniGraph(window.app.graph, miniGraphCanvas);
     }
 
-    // Handle click events on the mini-graph canvas to center the main graph
-    miniGraphCanvas.addEventListener('click', function(event) {
-        // Only proceed if the Ctrl key is not pressed
+    // Handle mouse down event
+    miniGraphCanvas.addEventListener('mousedown', function(event) {
         if (event.ctrlKey) {
-            return; // Exit the function without performing any action
+            return; // Do nothing if Ctrl is pressed
         }
 
-        const rect = miniGraphCanvas.getBoundingClientRect();
-        const clickX = event.clientX - rect.left;
-        const clickY = event.clientY - rect.top;
+        isDragging = true;
+        moveMainCanvas(event, miniGraphCanvas);
+    });
 
-        const graphX = clickX / miniGraphCanvas.scale + miniGraphCanvas.bounds.left;
-        const graphY = clickY / miniGraphCanvas.scale + miniGraphCanvas.bounds.top;
+    // Handle mouse move event (for dragging)
+    miniGraphCanvas.addEventListener('mousemove', function(event) {
+        if (isDragging) {
+            moveMainCanvas(event, miniGraphCanvas);
+        }
+    });
 
-        // Center the main canvas around the clicked point
-        const canvasElement = document.querySelector('canvas');
-        const viewportWidth = canvasElement.clientWidth / window.app.canvas.ds.scale;
-        const viewportHeight = canvasElement.clientHeight / window.app.canvas.ds.scale;
+    // Handle mouse up event (stop dragging)
+    miniGraphCanvas.addEventListener('mouseup', function() {
+        isDragging = false;
+    });
 
-        window.app.canvas.ds.offset[0] = -(graphX - viewportWidth / 2);
-        window.app.canvas.ds.offset[1] = -(graphY - viewportHeight / 2);
-
-        window.app.canvas.setDirty(true, true); // Force redraw
+    // Handle mouse out event (stop dragging if mouse leaves the minimap)
+    miniGraphCanvas.addEventListener('mouseout', function() {
+        isDragging = false;
     });
 
     // Update the mini-graph immediately and then on every frame
@@ -189,7 +298,6 @@ function initializeMiniGraph(settings) {
 function waitForAppAndGraph() {
     const interval = setInterval(() => {
         if (window.app && window.app.graph && window.app.graph._nodes && window.app.graph._nodes.length > 0) {
-            console.log("App and Graph are ready with nodes:", window.app.graph._nodes.length);
             clearInterval(interval); // Stop checking once the app and graph are ready
 
             // Load settings from localStorage (or use defaults)
@@ -201,11 +309,18 @@ function waitForAppAndGraph() {
                 opacity: 1
             };
 
+            api.addEventListener("executing", (e) => {
+                const nodeId = e.detail;
+                if (nodeId != null) {
+                    currentExecutingNode = nodeId;
+                    return;
+                }
+                currentExecutingNode = 0;
+            });
+
             initializeMiniGraph(settings); // Start the mini-graph with loaded settings
-        } else {
-            console.log("Waiting for app and graph to be ready...");
         }
-    }, 500); // Check every 1 second
+    }, 500); // Check every 500ms
 }
 
 // Start the waiting process
