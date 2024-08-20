@@ -1,6 +1,7 @@
 import { api } from '../../scripts/api.js';
 
 console.log("Graph Mirroring Script Loaded");
+const nodeTitleHeight = 30;
 let currentExecutingNode = "0";
 
 // Function to create and inject the mini-graph canvas into the DOM
@@ -48,21 +49,31 @@ function getTypeColor(link) {
 
 function getLinkPosition(originNode, targetNode, bounds, link, scale) {
     const xOffset = 10;
-    const topPadding = 10 * scale; // Space for node title
+    const topPadding = 15 * scale; // Space for node title
     const linkPadding = 20 * scale; // Space between inputs
 
     function calculateX(node, isOrigin) {
-        const nodeX = node.pos[0] + (isOrigin ? node.size[0] - xOffset : xOffset);
+        let nodeWidth = node.size[0];
+
+        if (node.flags?.collapsed) {
+            nodeWidth = node._collapsed_width;
+        }
+
+        const nodeX = node.pos[0] + (isOrigin ? nodeWidth - xOffset : xOffset);
         return (nodeX - bounds.left) * scale;
     }
 
     function calculateY(node, slot) {
+        const baseY = (node.pos[1] - bounds.top) * scale;
+
+        if (node.flags?.collapsed) {
+            return baseY - nodeTitleHeight * 0.5 * scale;
+        }
         if (node.isVirtualNode) {
-            return (node.pos[1] - bounds.top + node.size[1] * 0.5) * scale;
+            return baseY + node.size[1] * 0.5 * scale;
         }
 
-        const nodeTop = (node.pos[1] - bounds.top) * scale;
-        return nodeTop + topPadding + slot * linkPadding;
+        return baseY + topPadding + slot * linkPadding;
     }
 
     const originX = calculateX(originNode, true);
@@ -144,15 +155,21 @@ function renderMiniGraph(graph, miniGraphCanvas) {
     graph._nodes.forEach(node => {
         const nodeColor = node.color || defaultNodeColor;
         // For some reason, the top title of the nodes are not included in the size.
-        let heightPadding = node.isVirtualNode ? 0 : 30;
+        let heightPadding = node.isVirtualNode ? 0 : nodeTitleHeight;
 
         ctx.fillStyle = nodeColor;
 
         // Scale the node position and size to fit the mini-graph canvas
         const x = (node.pos[0] - bounds.left) * scale;
         const y = (node.pos[1] - bounds.top - heightPadding) * scale;
-        const width = node.size[0] * scale;
-        const height = (node.size[1] + heightPadding) * scale;
+        let width = node.size[0] * scale;
+        let height = (node.size[1] + heightPadding) * scale;
+
+        // Override width and height if collapsed
+        if (node.flags?.collapsed) {
+            width = node._collapsed_width * scale;
+            height = nodeTitleHeight * scale;
+        }
 
         ctx.fillRect(x, y, width, height);
 
@@ -167,12 +184,24 @@ function renderMiniGraph(graph, miniGraphCanvas) {
 
     // Draw all the dots on top
     if (scale > 0.15) {
+        const drawnCoordinates = new Set();
+
         graph.links.forEach(link => {
             if (link._originPos && link._targetPos) {
                 const dotColor = getTypeColor(link);
 
-                drawDot(ctx, link._originPos.x, link._originPos.y, dotColor, scale);
-                drawDot(ctx, link._targetPos.x, link._targetPos.y, dotColor, scale);
+                const originKey = `${link._originPos.x},${link._originPos.y}`;
+                const targetKey = `${link._targetPos.x},${link._targetPos.y}`;
+
+                if (!drawnCoordinates.has(originKey)) {
+                    drawDot(ctx, link._originPos.x, link._originPos.y, dotColor, scale);
+                    drawnCoordinates.add(originKey);
+                }
+
+                if (!drawnCoordinates.has(targetKey)) {
+                    drawDot(ctx, link._targetPos.x, link._targetPos.y, dotColor, scale);
+                    drawnCoordinates.add(targetKey);
+                }
             }
         });
     }
