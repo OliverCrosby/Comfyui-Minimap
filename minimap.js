@@ -53,13 +53,23 @@ function getLinkPosition(originNode, targetNode, bounds, link, scale) {
     const originTop = (originNode.pos[1] - bounds.top) * scale;
     const targetTop = (targetNode.pos[1] - bounds.top) * scale;
 
-    const topPadding = 40 * scale; // Space for node title
-    const linkPadding = topPadding / 2; // Space between inputs
+    const topPadding = 10 * scale; // Space for node title
+    const linkPadding = 20 * scale; // Space between inputs
 
     const originOffset = topPadding + link.origin_slot * linkPadding;
     const targetOffset = topPadding + link.target_slot * linkPadding;
-    const originY = originTop + originOffset;
-    const targetY = targetTop + targetOffset;
+
+    let originY = originTop + originOffset;
+    let targetY = targetTop + targetOffset;
+
+
+    // Hack to fix reroute links
+    if (originNode.type.toLowerCase().includes("reroute")) {
+        originY = (originNode.pos[1] - bounds.top + originNode.size[1] * 0.5) * scale;
+    }
+    if (targetNode.type.toLowerCase().includes("reroute")) {
+        targetY = (targetNode.pos[1] - bounds.top + targetNode.size[1] * 0.5) * scale;;
+    }
 
     return [originX, originY, targetX, targetY]
 }
@@ -133,14 +143,20 @@ function renderMiniGraph(graph, miniGraphCanvas) {
     // Render nodes on top of the connections
     graph._nodes.forEach(node => {
         const nodeColor = node.color || defaultNodeColor;
+        // For some reason, the top title of the nodes are not included in the size.
+        let heightPadding = 30;
+        const type = node.type.toLowerCase();
+        if (type.includes("reroute")) { // TODO: find better way to see if node has title or not.
+            heightPadding = 0;
+        }
 
         ctx.fillStyle = nodeColor;
 
         // Scale the node position and size to fit the mini-graph canvas
         const x = (node.pos[0] - bounds.left) * scale;
-        const y = (node.pos[1] - bounds.top) * scale;
+        const y = (node.pos[1] - bounds.top - heightPadding) * scale;
         const width = node.size[0] * scale;
-        const height = node.size[1] * scale;
+        const height = (node.size[1] + heightPadding) * scale;
 
         ctx.fillRect(x, y, width, height);
     });
