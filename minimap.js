@@ -121,11 +121,13 @@ function renderMiniGraph(graph, miniGraphCanvas) {
     // Render groups (if any)
     graph._groups.forEach(group => {
         ctx.fillStyle = group.color || '#ccc'; // Use group color or default
+        ctx.globalAlpha = 0.35;
         const x = (group.pos[0] - bounds.left) * scale;
         const y = (group.pos[1] - bounds.top) * scale;
         const width = group.size[0] * scale;
         const height = group.size[1] * scale;
         ctx.fillRect(x, y, width, height);
+        ctx.globalAlpha = 1.0;
     });
 
     // Render nodes on top of the connections
