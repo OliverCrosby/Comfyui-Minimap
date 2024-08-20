@@ -45,34 +45,32 @@ function getTypeColor(link) {
 
 function getLinkPosition(originNode, targetNode, bounds, link, scale) {
     const xOffset = 10;
-
-    // X is either rightmost or leftmost part of node.
-    const originX = (originNode.pos[0] + originNode.size[0] - bounds.left - xOffset) * scale;
-    const targetX = (targetNode.pos[0] - bounds.left + xOffset) * scale;
-
-    const originTop = (originNode.pos[1] - bounds.top) * scale;
-    const targetTop = (targetNode.pos[1] - bounds.top) * scale;
-
     const topPadding = 10 * scale; // Space for node title
     const linkPadding = 20 * scale; // Space between inputs
 
-    const originOffset = topPadding + link.origin_slot * linkPadding;
-    const targetOffset = topPadding + link.target_slot * linkPadding;
-
-    let originY = originTop + originOffset;
-    let targetY = targetTop + targetOffset;
-
-
-    // Hack to fix reroute links
-    if (originNode.type.toLowerCase().includes("reroute")) {
-        originY = (originNode.pos[1] - bounds.top + originNode.size[1] * 0.5) * scale;
-    }
-    if (targetNode.type.toLowerCase().includes("reroute")) {
-        targetY = (targetNode.pos[1] - bounds.top + targetNode.size[1] * 0.5) * scale;;
+    function calculateX(node, isOrigin) {
+        const nodeX = node.pos[0] + (isOrigin ? node.size[0] - xOffset : xOffset);
+        return (nodeX - bounds.left) * scale;
     }
 
-    return [originX, originY, targetX, targetY]
+    function calculateY(node, slot) {
+        if (node.isVirtualNode) {
+            return (node.pos[1] - bounds.top + node.size[1] * 0.5) * scale;
+        }
+
+        const nodeTop = (node.pos[1] - bounds.top) * scale;
+        return nodeTop + topPadding + slot * linkPadding;
+    }
+
+    const originX = calculateX(originNode, true);
+    const targetX = calculateX(targetNode, false);
+
+    const originY = calculateY(originNode, link.origin_slot);
+    const targetY = calculateY(targetNode, link.target_slot);
+
+    return [originX, originY, targetX, targetY];
 }
+
 
 function drawDot(ctx, x, y, color, scale) {
     ctx.beginPath();
@@ -144,11 +142,7 @@ function renderMiniGraph(graph, miniGraphCanvas) {
     graph._nodes.forEach(node => {
         const nodeColor = node.color || defaultNodeColor;
         // For some reason, the top title of the nodes are not included in the size.
-        let heightPadding = 30;
-        const type = node.type.toLowerCase();
-        if (type.includes("reroute")) { // TODO: find better way to see if node has title or not.
-            heightPadding = 0;
-        }
+        let heightPadding = node.isVirtualNode ? 0 : 30;
 
         ctx.fillStyle = nodeColor;
 
