@@ -33,17 +33,17 @@ function getTypeColor(link) {
         switch (type) {
             case "STRING":
             case "INT":
-                color = "#77ff77"
-                break
+                color = "#77ff77";
+                break;
             default:
-                color = "#666"
+                color = "#666";
                 if (link.color != undefined) {
                     color = link.color;
                 }
-                break
+                break;
         }
     }
-    return color
+    return color;
 }
 
 function getLinkPosition(originNode, targetNode, bounds, link, scale) {
@@ -73,7 +73,6 @@ function getLinkPosition(originNode, targetNode, bounds, link, scale) {
 
     return [originX, originY, targetX, targetY];
 }
-
 
 function drawDot(ctx, x, y, color, scale) {
     ctx.beginPath();
@@ -234,48 +233,6 @@ function getGraphBounds(graph) {
     };
 }
 
-// Function to initialize the mini-graph and start the rendering loop
-function initializeMiniGraph(settings) {
-    const miniGraphCanvas = createMiniGraphCanvas(settings);
-    let isDragging = false;
-
-    function updateMiniGraph() {
-        renderMiniGraph(window.app.graph, miniGraphCanvas);
-    }
-
-    // Handle mouse down event
-    miniGraphCanvas.addEventListener('mousedown', function(event) {
-        // Only proceed if the Ctrl key is not pressed
-        if (event.ctrlKey) {
-            return; // Exit the function without performing any action
-        }
-
-        isDragging = true;
-        moveMainCanvas(event, miniGraphCanvas);
-    });
-
-    // Handle mouse move event (for dragging)
-    miniGraphCanvas.addEventListener('mousemove', function(event) {
-        if (isDragging) {
-            moveMainCanvas(event, miniGraphCanvas);
-        }
-    });
-
-    // Handle mouse up event
-    miniGraphCanvas.addEventListener('mouseup', function() {
-        isDragging = false;
-    });
-
-    // Handle mouse out event (stop dragging if mouse leaves the minimap)
-    miniGraphCanvas.addEventListener('mouseout', function() {
-        isDragging = false;
-    });
-
-    // Update the mini-graph immediately and then on every frame
-    updateMiniGraph();
-    setInterval(updateMiniGraph, 100); // Adjust the interval as needed
-}
-
 // Function to move the main canvas based on the mouse event
 function moveMainCanvas(event, miniGraphCanvas) {
     const rect = miniGraphCanvas.getBoundingClientRect();
@@ -296,11 +253,51 @@ function moveMainCanvas(event, miniGraphCanvas) {
     window.app.canvas.setDirty(true, true); // Force redraw
 }
 
+// Function to initialize the mini-graph and start the rendering loop
+function initializeMiniGraph(settings) {
+    const miniGraphCanvas = createMiniGraphCanvas(settings);
+    let isDragging = false;
+
+    function updateMiniGraph() {
+        renderMiniGraph(window.app.graph, miniGraphCanvas);
+    }
+
+    // Handle mouse down event
+    miniGraphCanvas.addEventListener('mousedown', function(event) {
+        if (event.ctrlKey) {
+            return; // Do nothing if Ctrl is pressed
+        }
+
+        isDragging = true;
+        moveMainCanvas(event, miniGraphCanvas);
+    });
+
+    // Handle mouse move event (for dragging)
+    miniGraphCanvas.addEventListener('mousemove', function(event) {
+        if (isDragging) {
+            moveMainCanvas(event, miniGraphCanvas);
+        }
+    });
+
+    // Handle mouse up event (stop dragging)
+    miniGraphCanvas.addEventListener('mouseup', function() {
+        isDragging = false;
+    });
+
+    // Handle mouse out event (stop dragging if mouse leaves the minimap)
+    miniGraphCanvas.addEventListener('mouseout', function() {
+        isDragging = false;
+    });
+
+    // Update the mini-graph immediately and then on every frame
+    updateMiniGraph();
+    setInterval(updateMiniGraph, 100); // Adjust the interval as needed
+}
+
 // Ensure the app and graph are ready before initializing the mini-graph
 function waitForAppAndGraph() {
     const interval = setInterval(() => {
         if (window.app && window.app.graph && window.app.graph._nodes && window.app.graph._nodes.length > 0) {
-            console.log("App and Graph are ready with nodes:", window.app.graph._nodes.length);
             clearInterval(interval); // Stop checking once the app and graph are ready
 
             // Load settings from localStorage (or use defaults)
@@ -313,7 +310,7 @@ function waitForAppAndGraph() {
             };
 
             api.addEventListener("executing", (e) => {
-                const nodeId = e.detail
+                const nodeId = e.detail;
                 if (nodeId != null) {
                     currentExecutingNode = nodeId;
                     return;
@@ -322,10 +319,8 @@ function waitForAppAndGraph() {
             });
 
             initializeMiniGraph(settings); // Start the mini-graph with loaded settings
-        } else {
-            console.log("Waiting for app and graph to be ready...");
         }
-    }, 500); // Check every 1 second
+    }, 500); // Check every 500ms
 }
 
 // Start the waiting process
