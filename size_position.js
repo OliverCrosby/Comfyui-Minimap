@@ -5,6 +5,7 @@ document.head.appendChild(interactScript);
 
 interactScript.onload = () => {
     let isCtrlPressed = false;
+    let resizeTimeout;
 
     // Listen for keydown and keyup events to track the state of the Ctrl key
     window.addEventListener('keydown', (event) => {
@@ -59,6 +60,17 @@ interactScript.onload = () => {
                 makeDraggable(miniMapElement);
                 makeResizable(miniMapElement);
                 makeScrollable(miniMapElement);  // Add scroll handling for opacity
+                ensureMinimapInBounds(miniMapElement); // Make sure minimap is in bounds
+
+                window.addEventListener('resize', function() {
+                    if (resizeTimeout) {
+                        clearTimeout(resizeTimeout);
+                    }
+
+                    resizeTimeout = setTimeout(function() {
+                        ensureMinimapInBounds(miniMapElement);  // Ensure minimap stays within the window
+                    }, 200);
+                });
             }
         }, 500);
     }
@@ -165,7 +177,7 @@ interactScript.onload = () => {
                 }
                 return null;
             }
-            
+
         });
     }
 
@@ -187,6 +199,38 @@ interactScript.onload = () => {
                 saveMinimapSettings(top, left, width, height, opacity);
             }
         });
+    }
+
+    function ensureMinimapInBounds(miniMapElement) {
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        const miniMapRect = miniMapElement.getBoundingClientRect();
+
+        let newTop = parseFloat(miniMapElement.style.top);
+        let newLeft = parseFloat(miniMapElement.style.left);
+
+        // Ensure the minimap is not out of bounds on any side
+        if (miniMapRect.top < 0) {
+            newTop = 0;
+        } else if (miniMapRect.bottom > windowHeight) {
+            newTop = windowHeight - miniMapRect.height;
+        }
+
+        if (miniMapRect.left < 0) {
+            newLeft = 0;
+        } else if (miniMapRect.right > windowWidth) {
+            newLeft = windowWidth - miniMapRect.width;
+        }
+
+        miniMapElement.style.top = `${newTop}px`;
+        miniMapElement.style.left = `${newLeft}px`;
+
+        // Save the settings after adjusting the position
+        const width = parseFloat(miniMapElement.style.width);
+        const height = parseFloat(miniMapElement.style.height);
+        const opacity = parseFloat(miniMapElement.style.opacity) || 1;
+        saveMinimapSettings(newTop, newLeft, width, height, opacity);
     }
 
     waitForMinimap();
