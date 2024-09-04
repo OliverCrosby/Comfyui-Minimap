@@ -347,6 +347,10 @@ function waitForAppAndGraph() {
                 currentExecutingNode = 0;
             });
 
+            // Initialize settings when graph is added.
+            const event = new CustomEvent('minimap.reloadSettings');
+            window.dispatchEvent(event);
+
             initializeMiniGraph(settings); // Start the mini-graph with loaded settings
         }
     }, 500); // Check every 500ms

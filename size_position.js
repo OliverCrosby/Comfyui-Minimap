@@ -1,7 +1,21 @@
+import { api } from '../../scripts/api.js';
+
 // Load interact.js from CDN
 const interactScript = document.createElement('script');
 interactScript.src = 'https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js';
 document.head.appendChild(interactScript);
+
+// Initialize settings globally
+let boundsSetting;
+
+window.addEventListener('minimap.reloadSettings', async () => {
+    boundsSetting = await api.getSetting("minimap.KeepInBounds");
+
+    if (boundsSetting) {
+        const event = new Event('resize');
+        window.dispatchEvent(event);
+    }
+});
 
 interactScript.onload = () => {
     let isCtrlPressed = false;
@@ -68,7 +82,9 @@ interactScript.onload = () => {
                     }
 
                     resizeTimeout = setTimeout(function() {
-                        ensureMinimapInBounds(miniMapElement);  // Ensure minimap stays within the window
+                        if (boundsSetting) {
+                            ensureMinimapInBounds(miniMapElement);  // Ensure minimap stays within the window
+                        }
                     }, 200);
                 });
             }
