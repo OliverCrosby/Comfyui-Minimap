@@ -12,9 +12,10 @@ let snapTo;
 window.addEventListener('minimap.reloadSettings', async () => {
     const settings = await api.getSettings();
 
-    boundsSetting = settings['minimap.KeepInBounds'];
-    snapTo = settings['minimap.SnapTo'];
+    boundsSetting = settings['minimap.KeepInBounds'] ?? true;
+    snapTo = settings['minimap.SnapTo'] ?? 'none';
 
+    console.log(boundsSetting, snapTo);
     if (boundsSetting) {
         const event = new Event('resize');
         window.dispatchEvent(event);
@@ -86,7 +87,7 @@ interactScript.onload = () => {
                     }
 
                     resizeTimeout = setTimeout(function() {
-                        if (boundsSetting) {
+                        if (boundsSetting != false) {
                             ensureMinimapInBounds(miniMapElement);  // Ensure minimap stays within the window
                         }
                     }, 200);
