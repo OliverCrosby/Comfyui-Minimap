@@ -7,9 +7,13 @@ document.head.appendChild(interactScript);
 
 // Initialize settings globally
 let boundsSetting;
+let snapTo;
 
 window.addEventListener('minimap.reloadSettings', async () => {
-    boundsSetting = await api.getSetting("minimap.KeepInBounds");
+    const settings = await api.getSettings();
+
+    boundsSetting = settings['minimap.KeepInBounds'];
+    snapTo = settings['minimap.SnapTo'];
 
     if (boundsSetting) {
         const event = new Event('resize');
