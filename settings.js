@@ -1,6 +1,6 @@
 import { app } from '../../scripts/app.js';
 
-async function reloadSettings() {
+function reloadSettings() {
     const event = new CustomEvent('minimap.reloadSettings');
     window.dispatchEvent(event);
 }
