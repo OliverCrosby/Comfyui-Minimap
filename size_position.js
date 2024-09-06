@@ -290,23 +290,26 @@ interactScript.onload = () => {
                 newTop = relativeY * windowHeight;
                 newLeft = relativeX * windowWidth;
                 break;
-            default:
-                if (snapTo != "none") {
-                    console.warn(`Invalid snapTo value: ${snapTo}`);
-                }
-
-                if (miniMapRect.top < topPadding) {
-                    newTop = topPadding;
-                } else if (miniMapRect.bottom > windowHeight) {
-                    newTop = windowHeight - miniMapRect.height + topPadding;
-                }
-
-                if (miniMapRect.left < leftPadding) {
-                    newLeft = leftPadding;
-                } else if (miniMapRect.right > windowWidth) {
-                    newLeft = windowWidth - miniMapRect.width - rightPadding;
-                }
+            case "none":
                 break;
+            default:
+                console.warn(`Invalid snapTo value: ${snapTo}`);
+                break;
+        }
+
+        // Keep in bounds
+        if (boundsSetting) {
+            if (miniMapRect.top < topPadding) {
+                newTop = topPadding;
+            } else if (miniMapRect.bottom > windowHeight) {
+                newTop = windowHeight - miniMapRect.height + topPadding;
+            }
+
+            if (miniMapRect.left < leftPadding) {
+                newLeft = leftPadding;
+            } else if (miniMapRect.right > windowWidth) {
+                newLeft = windowWidth - miniMapRect.width - rightPadding;
+            }
         }
 
         return [newTop, newLeft];
