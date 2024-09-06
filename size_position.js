@@ -21,8 +21,6 @@ window.addEventListener('minimap.reloadSettings', async () => {
     snapTo = settings['minimap.SnapTo'] ?? 'none';
     restrictToGraph = settings['minimap.RestrictToGraph'] ?? true;
 
-    console.log(boundsSetting, snapTo);
-
     // Send resize event to trigger ensureMinimapInBounds
     const event = new Event('resize');
     window.dispatchEvent(event);
@@ -105,7 +103,6 @@ interactScript.onload = () => {
                     resizeTimeout = setTimeout(function() {
                         if (boundsSetting != false || snapTo != "none") {
                             ensureMinimapInBounds(miniMapElement);  // Ensure minimap stays within the window
-                            console.log(relativeX, relativeY)
                         }
                     }, 200);
                 });
