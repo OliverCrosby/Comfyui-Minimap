@@ -8,18 +8,24 @@ document.head.appendChild(interactScript);
 // Initialize settings globally
 let boundsSetting;
 let snapTo;
+let restrictToGraph;
 
+let relativeX = 0;
+let relativeY = 0;
+
+// Reload all settings
 window.addEventListener('minimap.reloadSettings', async () => {
     const settings = await api.getSettings();
 
     boundsSetting = settings['minimap.KeepInBounds'] ?? true;
     snapTo = settings['minimap.SnapTo'] ?? 'none';
+    restrictToGraph = settings['minimap.RestrictToGraph'] ?? true;
 
     console.log(boundsSetting, snapTo);
-    if (boundsSetting) {
-        const event = new Event('resize');
-        window.dispatchEvent(event);
-    }
+
+    // Send resize event to trigger ensureMinimapInBounds
+    const event = new Event('resize');
+    window.dispatchEvent(event);
 });
 
 interactScript.onload = () => {
@@ -68,6 +74,15 @@ interactScript.onload = () => {
         }
     }
 
+    function getComfyPadding() {
+        const topPadding = restrictToGraph ? (window.app?.bodyTop?.clientHeight || 0) : 0;
+        const bottomPadding = restrictToGraph ? (window.app?.bodyBottom?.clientHeight || 0) : 0;
+        const leftPadding = restrictToGraph ? (window.app?.bodyLeft?.clientWidth || 0) : 0;
+        const rightPadding = restrictToGraph ? (window.app?.bodyRight?.clientWidth || 0) : 0;
+
+        return [topPadding, bottomPadding, leftPadding, rightPadding];
+    }
+
     // Wait for the #minimap to be injected into the DOM
     function waitForMinimap() {
         const interval = setInterval(() => {
@@ -80,6 +95,7 @@ interactScript.onload = () => {
                 makeResizable(miniMapElement);
                 makeScrollable(miniMapElement);  // Add scroll handling for opacity
                 ensureMinimapInBounds(miniMapElement); // Make sure minimap is in bounds
+                saveRelativePosition(miniMapElement);
 
                 window.addEventListener('resize', function() {
                     if (resizeTimeout) {
@@ -87,8 +103,9 @@ interactScript.onload = () => {
                     }
 
                     resizeTimeout = setTimeout(function() {
-                        if (boundsSetting != false) {
+                        if (boundsSetting != false || snapTo != "none") {
                             ensureMinimapInBounds(miniMapElement);  // Ensure minimap stays within the window
+                            console.log(relativeX, relativeY)
                         }
                     }, 200);
                 });
@@ -112,14 +129,21 @@ interactScript.onload = () => {
                     position.y = parseFloat(miniMapElement.style.top) || 0;
                 },
                 move(event) {
+                    const [topPadding, bottomPadding, leftPadding, rightPadding] = getComfyPadding();
+
                     position.x += event.dx;
                     position.y += event.dy;
 
                     const windowWidth = window.innerWidth - miniMapElement.offsetWidth;
                     const windowHeight = window.innerHeight - miniMapElement.offsetHeight;
 
-                    position.x = Math.max(0, Math.min(position.x, windowWidth));
-                    position.y = Math.max(0, Math.min(position.y, windowHeight));
+                    const maxX = windowWidth - rightPadding;
+                    const maxY = windowHeight - bottomPadding;
+                    const minX = leftPadding;
+                    const minY = topPadding;
+
+                    position.x = Math.max(minX, Math.min(position.x, maxX));
+                    position.y = Math.max(minY, Math.min(position.y, maxY));
 
                     miniMapElement.style.left = `${position.x}px`;
                     miniMapElement.style.top = `${position.y}px`;
@@ -127,6 +151,9 @@ interactScript.onload = () => {
                     // Save the new position to the settings
                     const opacity = parseFloat(miniMapElement.style.opacity) || 1;
                     saveMinimapSettings(position.y, position.x, miniMapElement.offsetWidth, miniMapElement.offsetHeight, opacity);
+                },
+                end(event) {
+                    saveRelativePosition(miniMapElement);
                 }
             },
             cursorChecker(action) {
@@ -222,27 +249,72 @@ interactScript.onload = () => {
         });
     }
 
-    function ensureMinimapInBounds(miniMapElement) {
+    function saveRelativePosition(miniMapElement) {
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
 
         const miniMapRect = miniMapElement.getBoundingClientRect();
 
+        relativeX = miniMapRect.left / windowWidth;
+        relativeY = miniMapRect.top / windowHeight;
+    }
+
+    function calculateSnappedMinimapPosition(miniMapElement, miniMapRect) {
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        // Get padding so we don't overlap with the new UI
+        const [topPadding, bottomPadding, leftPadding, rightPadding] = getComfyPadding();
+
         let newTop = parseFloat(miniMapElement.style.top);
         let newLeft = parseFloat(miniMapElement.style.left);
 
-        // Ensure the minimap is not out of bounds on any side
-        if (miniMapRect.top < 0) {
-            newTop = 0;
-        } else if (miniMapRect.bottom > windowHeight) {
-            newTop = windowHeight - miniMapRect.height;
+        switch (snapTo) {
+            case "topleft":
+                newTop = topPadding;
+                newLeft = leftPadding;
+                break;
+            case "topright":
+                newTop = topPadding;
+                newLeft = windowWidth - miniMapRect.width - rightPadding;
+                break;
+            case "bottomleft":
+                newTop = windowHeight - miniMapRect.height - bottomPadding;
+                newLeft = leftPadding;
+                break;
+            case "bottomright":
+                newTop = windowHeight - miniMapRect.height - bottomPadding;
+                newLeft = windowWidth - miniMapRect.width - rightPadding;
+                break;
+            case "relative":
+                newTop = relativeY * windowHeight;
+                newLeft = relativeX * windowWidth;
+                break;
+            default:
+                if (snapTo != "none") {
+                    console.warn(`Invalid snapTo value: ${snapTo}`);
+                }
+
+                if (miniMapRect.top < topPadding) {
+                    newTop = topPadding;
+                } else if (miniMapRect.bottom > windowHeight) {
+                    newTop = windowHeight - miniMapRect.height + topPadding;
+                }
+
+                if (miniMapRect.left < leftPadding) {
+                    newLeft = leftPadding;
+                } else if (miniMapRect.right > windowWidth) {
+                    newLeft = windowWidth - miniMapRect.width - rightPadding;
+                }
+                break;
         }
 
-        if (miniMapRect.left < 0) {
-            newLeft = 0;
-        } else if (miniMapRect.right > windowWidth) {
-            newLeft = windowWidth - miniMapRect.width;
-        }
+        return [newTop, newLeft];
+    }
+
+    function ensureMinimapInBounds(miniMapElement) {
+        const miniMapRect = miniMapElement.getBoundingClientRect();
+        let [newTop, newLeft] = calculateSnappedMinimapPosition(miniMapElement, miniMapRect);
 
         miniMapElement.style.top = `${newTop}px`;
         miniMapElement.style.left = `${newLeft}px`;
