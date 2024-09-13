@@ -11,8 +11,15 @@ let snapTo;
 let restrictToGraph;
 let betaMenu;
 
+const relativePosition = localStorage.getItem('minimapRelativePosition');
 let relativeX = 0;
 let relativeY = 0;
+
+if (relativePosition) {
+    const position = JSON.parse(relativePosition);
+    relativeX = position.x ?? 0;
+    relativeY = position.y ?? 0;
+}
 
 // Reload all settings
 window.addEventListener('minimap.reloadSettings', async () => {
@@ -133,7 +140,6 @@ interactScript.onload = () => {
                 },
                 move(event) {
                     const [topPadding, bottomPadding, leftPadding, rightPadding] = getComfyPadding();
-                    console.log(topPadding, bottomPadding, leftPadding, rightPadding);
 
                     position.x += event.dx;
                     position.y += event.dy;
@@ -261,7 +267,7 @@ interactScript.onload = () => {
 
         relativeX = miniMapRect.left / windowWidth;
         relativeY = miniMapRect.top / windowHeight;
-        console.log(`Relative position: ${relativeX}, ${relativeY}`);
+        localStorage.setItem('minimapRelativePosition', JSON.stringify({ x: relativeX, y: relativeY }));
     }
 
     function calculateSnappedMinimapPosition(miniMapElement, miniMapRect) {
