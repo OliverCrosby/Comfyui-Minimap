@@ -18,6 +18,7 @@ const settingsDefinitions = [
         id: 'minimap.RestrictToGraph',
         category: ['Minimap', 'Bounds', 'Restrict To Graph'],
         name: 'Restrict Minimap to Graph',
+        experimental: true,
         defaultValue: true,
         type: 'boolean',
         tooltip: 'Only works with the beta menu. Prevents the minimap from overlapping UI elements and restricts it to the graph area only.',
