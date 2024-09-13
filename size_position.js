@@ -9,6 +9,7 @@ document.head.appendChild(interactScript);
 let boundsSetting;
 let snapTo;
 let restrictToGraph;
+let betaMenu;
 
 let relativeX = 0;
 let relativeY = 0;
@@ -19,7 +20,8 @@ window.addEventListener('minimap.reloadSettings', async () => {
 
     boundsSetting = settings['minimap.KeepInBounds'] ?? true;
     snapTo = settings['minimap.SnapTo'] ?? 'none';
-    restrictToGraph = settings['minimap.RestrictToGraph'] ?? true;
+    restrictToGraph = settings['minimap.RestrictToGraph'] ?? false;
+    betaMenu = settings['Comfy.UseNewMenu'] ?? 'Disabled';
 
     // Send resize event to trigger ensureMinimapInBounds
     const event = new Event('resize');
@@ -73,6 +75,10 @@ interactScript.onload = () => {
     }
 
     function getComfyPadding() {
+        if (betaMenu === 'Disabled') {
+            return [0, 0, 0, 0];
+        }
+
         const topPadding = restrictToGraph ? (window.app?.bodyTop?.clientHeight || 0) : 0;
         const bottomPadding = restrictToGraph ? (window.app?.bodyBottom?.clientHeight || 0) : 0;
         const leftPadding = restrictToGraph ? (window.app?.bodyLeft?.clientWidth || 0) : 0;
@@ -127,6 +133,7 @@ interactScript.onload = () => {
                 },
                 move(event) {
                     const [topPadding, bottomPadding, leftPadding, rightPadding] = getComfyPadding();
+                    console.log(topPadding, bottomPadding, leftPadding, rightPadding);
 
                     position.x += event.dx;
                     position.y += event.dy;
@@ -254,6 +261,7 @@ interactScript.onload = () => {
 
         relativeX = miniMapRect.left / windowWidth;
         relativeY = miniMapRect.top / windowHeight;
+        console.log(`Relative position: ${relativeX}, ${relativeY}`);
     }
 
     function calculateSnappedMinimapPosition(miniMapElement, miniMapRect) {
