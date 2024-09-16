@@ -9,7 +9,6 @@ document.head.appendChild(interactScript);
 let boundsSetting;
 let snapTo;
 let restrictToGraph;
-let betaMenu;
 
 const relativePosition = localStorage.getItem('minimapRelativePosition');
 let relativeX = 0;
@@ -28,7 +27,6 @@ window.addEventListener('minimap.reloadSettings', async () => {
     boundsSetting = settings['minimap.KeepInBounds'] ?? true;
     snapTo = settings['minimap.SnapTo'] ?? 'none';
     restrictToGraph = settings['minimap.RestrictToGraph'] ?? false;
-    betaMenu = settings['Comfy.UseNewMenu'] ?? 'Disabled';
 
     // Send resize event to trigger ensureMinimapInBounds
     const event = new Event('resize');
@@ -82,14 +80,21 @@ interactScript.onload = () => {
     }
 
     function getComfyPadding() {
-        if (betaMenu === 'Disabled') {
-            return [0, 0, 0, 0];
-        }
-
         const topPadding = restrictToGraph ? (window.app?.bodyTop?.clientHeight || 0) : 0;
         const bottomPadding = restrictToGraph ? (window.app?.bodyBottom?.clientHeight || 0) : 0;
         const leftPadding = restrictToGraph ? (window.app?.bodyLeft?.clientWidth || 0) : 0;
         const rightPadding = restrictToGraph ? (window.app?.bodyRight?.clientWidth || 0) : 0;
+
+        const clientWidth = window.app.canvas.canvas.clientWidth;
+        const clientHeight = window.app.canvas.canvas.clientHeight;
+
+        // If the padding is larger than the client size, return 0 padding
+        if (leftPadding >= clientWidth || rightPadding >= clientWidth) {
+            return [0, 0, 0, 0];
+        }
+        if (topPadding >= clientHeight || bottomPadding >= clientHeight) {
+            return [0, 0, 0, 0];
+        }
 
         return [topPadding, bottomPadding, leftPadding, rightPadding];
     }
